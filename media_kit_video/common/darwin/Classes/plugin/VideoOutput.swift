@@ -179,13 +179,10 @@ public class VideoOutput: NSObject {
   }
 
   private var videoSize: CGSize {
-        // fixed size
-        if width != nil && height != nil {
-            return CGSize(
-                width: Double(width!),
-                height: Double(height!)
-            )
-        }
+    // Fixed size takes precedence
+    if width != nil && height != nil {
+      return CGSize(width: Double(width!), height: Double(height!))
+    }
 
     let params = MPVHelpers.getVideoOutParams(handle)
 
