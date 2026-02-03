@@ -35,6 +35,7 @@ public class VideoOutput: NSObject {
   private var textureId: Int64 = -1
   private var currentSize: CGSize = CGSize.zero
   private var disposed: Bool = false
+  private var isUsingHardwareAcceleration: Bool = false
 
   init(
     handle: Int64,
@@ -74,11 +75,11 @@ public class VideoOutput: NSObject {
   }
 
   private func _init() {
-    let enableHardwareAcceleration =
+    isUsingHardwareAcceleration =
       VideoOutput.isSimulator ? false : enableHardwareAcceleration
 
     NSLog(
-      "VideoOutput: enableHardwareAcceleration: \(enableHardwareAcceleration)"
+      "VideoOutput: enableHardwareAcceleration: \(isUsingHardwareAcceleration)"
     )
 
     if VideoOutput.isSimulator {
@@ -87,7 +88,7 @@ public class VideoOutput: NSObject {
       )
     }
 
-    if enableHardwareAcceleration {
+    if isUsingHardwareAcceleration {
       texture = SafeResizableTexture(
         TextureHW(
           handle: handle,
@@ -177,7 +178,7 @@ public class VideoOutput: NSObject {
     }
   }
 
-    private var videoSize: CGSize {
+  private var videoSize: CGSize {
         // fixed size
         if width != nil && height != nil {
             return CGSize(
@@ -185,15 +186,26 @@ public class VideoOutput: NSObject {
                 height: Double(height!)
             )
         }
-        
-        let params = MPVHelpers.getVideoOutParams(handle)
-        return CGSize(
-            width: Double(width ?? (params.rotate == 0 || params.rotate == 180
-                                    ? params.dw
-                                    : params.dh)),
-            height: Double(height ?? (params.rotate == 0 || params.rotate == 180
-                                      ? params.dh
-                                      : params.dw))
-        )
+
+    let params = MPVHelpers.getVideoOutParams(handle)
+
+    // Software rendering (iOS Simulator): Skip videos with 90°/270° rotation.
+    // mpv's SW render API crashes on rotated videos due to dimension mismatches.
+    // See: https://github.com/media-kit/media-kit/issues/627
+    if !isUsingHardwareAcceleration {
+      let rotation = params.rotate
+      if rotation == 90 || rotation == 270 {
+        return CGSize.zero
+      }
+    }
+
+    return CGSize(
+      width: Double(width ?? (params.rotate == 0 || params.rotate == 180
+                              ? params.dw
+                              : params.dh)),
+      height: Double(height ?? (params.rotate == 0 || params.rotate == 180
+                                ? params.dh
+                                : params.dw))
+    )
   }
 }
