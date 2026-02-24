@@ -79,6 +79,12 @@ public class VideoOutput: NSObject {
       VideoOutput.isSimulator ? false : enableHardwareAcceleration
     isUsingHardwareAcceleration = enableHardwareAcceleration
 
+    if !enableHardwareAcceleration {
+      // Disable video rotation for SW rendering to prevent SIGABRT in
+      // mp_image_crop when rotated videos exceed decoded frame dimensions.
+      mpv_set_property_string(handle, "video-rotate", "no")
+    }
+
     NSLog(
       "VideoOutput: enableHardwareAcceleration: \(enableHardwareAcceleration)"
     )
