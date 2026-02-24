@@ -34,6 +34,7 @@ public class VideoOutput: NSObject {
   private var texture: ResizableTextureProtocol!
   private var textureId: Int64 = -1
   private var currentSize: CGSize = CGSize.zero
+  private var isUsingHardwareAcceleration: Bool = false
   private var disposed: Bool = false
 
   init(
@@ -76,6 +77,7 @@ public class VideoOutput: NSObject {
   private func _init() {
     let enableHardwareAcceleration =
       VideoOutput.isSimulator ? false : enableHardwareAcceleration
+    isUsingHardwareAcceleration = enableHardwareAcceleration
 
     NSLog(
       "VideoOutput: enableHardwareAcceleration: \(enableHardwareAcceleration)"
@@ -185,8 +187,20 @@ public class VideoOutput: NSObject {
                 height: Double(height!)
             )
         }
-        
+
         let params = MPVHelpers.getVideoOutParams(handle)
+
+        // The SW renderer outputs frames at codec dimensions (w×h), not
+        // display dimensions (dw×dh). Using dw/dh with rotation swapping
+        // can produce a render target larger than the actual frame, causing
+        // an assertion failure in mpv's mp_image_crop.
+        if !isUsingHardwareAcceleration {
+            return CGSize(
+                width: Double(width ?? params.w),
+                height: Double(height ?? params.h)
+            )
+        }
+
         return CGSize(
             width: Double(width ?? (params.rotate == 0 || params.rotate == 180
                                     ? params.dw
