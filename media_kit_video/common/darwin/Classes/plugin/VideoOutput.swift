@@ -82,7 +82,7 @@ public class VideoOutput: NSObject {
     if !enableHardwareAcceleration {
       // Disable video rotation for SW rendering to prevent SIGABRT in
       // mp_image_crop when rotated videos exceed decoded frame dimensions.
-      mpv_set_property_string(handle, "video-rotate", "no")
+      mpv_set_property_string(handle, "video-rotate", "0")
     }
 
     NSLog(
