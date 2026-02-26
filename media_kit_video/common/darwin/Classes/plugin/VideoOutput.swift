@@ -34,7 +34,6 @@ public class VideoOutput: NSObject {
   private var texture: ResizableTextureProtocol!
   private var textureId: Int64 = -1
   private var currentSize: CGSize = CGSize.zero
-  private var isUsingHardwareAcceleration: Bool = false
   private var disposed: Bool = false
 
   init(
@@ -77,12 +76,11 @@ public class VideoOutput: NSObject {
   private func _init() {
     let enableHardwareAcceleration =
       VideoOutput.isSimulator ? false : enableHardwareAcceleration
-    isUsingHardwareAcceleration = enableHardwareAcceleration
 
     if !enableHardwareAcceleration {
       // Disable video rotation for SW rendering to prevent SIGABRT in
       // mp_image_crop when rotated videos exceed decoded frame dimensions.
-      mpv_set_property_string(handle, "video-rotate", "0")
+      mpv_set_property_string(handle, "video-rotate", "no")
     }
 
     NSLog(
@@ -196,17 +194,8 @@ public class VideoOutput: NSObject {
 
         let params = MPVHelpers.getVideoOutParams(handle)
 
-        // The SW renderer outputs frames at codec dimensions (w×h), not
-        // display dimensions (dw×dh). Using dw/dh with rotation swapping
-        // can produce a render target larger than the actual frame, causing
-        // an assertion failure in mpv's mp_image_crop.
-        if !isUsingHardwareAcceleration {
-            return CGSize(
-                width: Double(width ?? params.w),
-                height: Double(height ?? params.h)
-            )
-        }
-
+        // For SW rendering, video-rotate=no guarantees params.rotate == 0,
+        // so the rotation swap below always takes the dw/dh path.
         return CGSize(
             width: Double(width ?? (params.rotate == 0 || params.rotate == 180
                                     ? params.dw

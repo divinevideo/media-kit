@@ -105,6 +105,15 @@ public class TextureSW: NSObject, FlutterTexture, ResizableTextureProtocol {
       return
     }
 
+    // Guard: skip frame if pixel buffer size doesn't match requested render
+    // size. This prevents crashes from race conditions when video params
+    // change between resize() and render() calls.
+    let bufferWidth = CVPixelBufferGetWidth(textureContext!.pixelBuffer)
+    let bufferHeight = CVPixelBufferGetHeight(textureContext!.pixelBuffer)
+    guard Int(size.width) == bufferWidth && Int(size.height) == bufferHeight else {
+      return
+    }
+
     CVPixelBufferLockBaseAddress(
       textureContext!.pixelBuffer,
       CVPixelBufferLockFlags(rawValue: 0)
