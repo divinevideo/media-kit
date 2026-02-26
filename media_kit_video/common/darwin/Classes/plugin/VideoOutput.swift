@@ -34,6 +34,7 @@ public class VideoOutput: NSObject {
   private var texture: ResizableTextureProtocol!
   private var textureId: Int64 = -1
   private var currentSize: CGSize = CGSize.zero
+  private var isUsingSWRenderer: Bool = false
   private var disposed: Bool = false
 
   init(
@@ -77,10 +78,28 @@ public class VideoOutput: NSObject {
     let enableHardwareAcceleration =
       VideoOutput.isSimulator ? false : enableHardwareAcceleration
 
+    isUsingSWRenderer = !enableHardwareAcceleration
+
     if !enableHardwareAcceleration {
       // Disable video rotation for SW rendering to prevent SIGABRT in
       // mp_image_crop when rotated videos exceed decoded frame dimensions.
-      mpv_set_property_string(handle, "video-rotate", "no")
+      // Use typed INT64 property set (value -1 = "no") to bypass string parsing.
+      var rotateValue: Int64 = -1
+      let result = withUnsafeMutablePointer(to: &rotateValue) { ptr in
+        mpv_set_property(handle, "video-rotate", MPV_FORMAT_INT64, ptr)
+      }
+      if result < 0 {
+        NSLog("VideoOutput: mpv_set_property video-rotate=-1 failed: \(String(cString: mpv_error_string(result))), trying string")
+        let strResult = mpv_set_property_string(handle, "video-rotate", "no")
+        if strResult < 0 {
+          NSLog("VideoOutput: mpv_set_property_string video-rotate=no also failed: \(String(cString: mpv_error_string(strResult)))")
+        }
+      }
+
+      // Verify the property was set
+      var readBack: Int64 = 0
+      mpv_get_property(handle, "video-rotate", MPV_FORMAT_INT64, &readBack)
+      NSLog("VideoOutput: video-rotate after set = \(readBack)")
     }
 
     NSLog(
@@ -173,6 +192,16 @@ public class VideoOutput: NSObject {
 
     if disposed {
       return
+    }
+
+    // Guard: skip render if rotation would cause SIGABRT in SW renderer.
+    // mpv's mp_image_crop asserts that the crop rect fits the decoded frame,
+    // but 90°/270° rotation swaps dimensions, violating the assertion.
+    if isUsingSWRenderer {
+      let params = MPVHelpers.getVideoOutParams(handle)
+      if params.rotate == 90 || params.rotate == 270 {
+        return
+      }
     }
 
     texture.render(size)
