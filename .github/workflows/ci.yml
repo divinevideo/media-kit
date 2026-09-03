@@ -1,6 +1,9 @@
 name: Github Actions
 on: [push, pull_request]
 
+permissions:
+  contents: read
+
 jobs:
   media_kit-tests-windows:
     name: package:media_kit tests (Windows)
@@ -91,6 +94,8 @@ jobs:
   windows:
     name: Windows
     runs-on: windows-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: media_kit_test
@@ -121,6 +126,8 @@ jobs:
   linux:
     name: Linux
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: media_kit_test
@@ -153,6 +160,8 @@ jobs:
   macos:
     name: macOS
     runs-on: macos-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: media_kit_test
@@ -183,6 +192,8 @@ jobs:
   ios:
     name: iOS
     runs-on: macos-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: media_kit_test
@@ -213,6 +224,8 @@ jobs:
   android:
     name: Android
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: media_kit_test

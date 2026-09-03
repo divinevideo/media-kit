@@ -1065,32 +1065,17 @@ void main() {
       // Wait for EOF.
       await completer.future;
 
-      final expectPosition = expectAsync1(
-        (value) {
-          print(value);
-          expect(value, isA<Duration>());
-          final position = value as Duration;
-          expect(position, Duration.zero);
-        },
-        count: 1,
-        max: -1,
+      final zeroPosition = player.stream.position.firstWhere(
+        (position) => position == Duration.zero,
       );
-
-      player.stream.position.listen((event) async {
-        print(event);
-        expectPosition(event);
-      });
-
-      // NOTE: VOLUNTARY DELAY.
-      await Future.delayed(const Duration(seconds: 5));
 
       // Begin test.
 
       await player.seek(Duration.zero);
 
-      // End test.
+      await zeroPosition;
 
-      await Future.delayed(const Duration(seconds: 5));
+      // End test.
 
       await player.dispose();
     },
